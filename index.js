@@ -22,7 +22,9 @@ var Row = React.createClass({
   },
   handleLongPress: function(e) {
     this.refs.view.measure((frameX, frameY, frameWidth, frameHeight, pageX, pageY) => {
-      let layout = {frameX, frameY, frameWidth, frameHeight, pageX, pageY};
+      
+      let layout = {frameX, frameY, frameWidth, frameHeight, pageX, pageY: pageY +1 };
+      console.log('longPress', layout)
       this.props.onRowActive({
         layout: layout,
         touch: e.nativeEvent,
@@ -45,7 +47,10 @@ var Row = React.createClass({
 
     let activeIndex = activeData ? Number(activeData.rowData.index) : -5;
     let shouldDisplayHovering = activeIndex !== this.props.rowData.index;
-    let Row = React.cloneElement(this.props.renderRow(this.props.rowData.data, this.props.rowData.section, this.props.rowData.index, null, this.props.active), {sortHandlers: {onLongPress: this.handleLongPress, onPressOut: this.props.list.cancel}, onLongPress: this.handleLongPress, onPressOut: this.props.list.cancel});
+    let Row = React.cloneElement(
+      this.props.renderRow(this.props.rowData.data, this.props.rowData.section, this.props.rowData.index, null, this.props.active), 
+      {sortHandlers: {onLongPress: this.handleLongPress, onPressOut: this.props.list.cancel}, onLongPress: this.handleLongPress, onPressOut: this.props.list.cancel}
+    );
     return <View onLayout={this.props.onRowLayout} style={this.props.active && this.props.list.state.hovering ? {height: 0.01, opacity: 0} : null} ref="view">
           {this.props.hovering && shouldDisplayHovering ? this.props.activeDivider : null}
           {this.props.active && this.props.list.state.hovering && this.props._legacySupport ? null : Row}
@@ -171,7 +176,7 @@ var SortableListView = React.createClass({
 
     return this.state;
   },
-  cancel: function() {
+  cancel: function() { 
     if (!this.moved) {
       this.setState({
         active: false,
@@ -180,14 +185,10 @@ var SortableListView = React.createClass({
     }
   },
   componentDidMount: function() {
-    setTimeout(()=>{
-      this.scrollResponder = this.refs.list.getScrollResponder();
-      this.refs.wrapper.measure((frameX, frameY, frameWidth, frameHeight, pageX, pageY) => {
-
-        let layout = {frameX, frameY, frameWidth, frameHeight, pageX, pageY};
-        this.wrapperLayout = layout;
-      });
-    }, 1);
+    /*setTimeout(()=>{
+      console.log('oooooo')
+      
+    }, 10);*/
 
   },
   scrollValue: 0,
@@ -227,10 +228,8 @@ var SortableListView = React.createClass({
   },
   checkTargetElement() {
     let scrollValue = this.scrollValue;
-
     let moveY = this.moveY;
-    let targetPixel = scrollValue + moveY - this.firstRowY;
-
+    let targetPixel = scrollValue + moveY - this.wrapperLayout.pageY;
     let i = 0;
     let x = 0;
     let row;
@@ -257,11 +256,9 @@ var SortableListView = React.createClass({
     }
 
   },
-  firstRowY: undefined,
   layoutMap: {},
   _rowRefs: {},
   handleRowActive: function(row) {
-    if (this.props.disableSorting) return;
     this.state.pan.setValue({x: 0, y: 0});
     LayoutAnimation.easeInEaseOut();
     this.moveY = row.layout.pageY;
@@ -284,7 +281,7 @@ var SortableListView = React.createClass({
       active = {active: true};
     }
     let hoveringIndex = this.order[this.state.hovering];
-    return (<Component
+    return <Component
       {...this.props}
       activeDivider={this.renderActiveDivider()}
       key={index}
@@ -295,14 +292,8 @@ var SortableListView = React.createClass({
       panResponder={this.state.panResponder}
       rowData={{data, section, index}}
       onRowActive={this.handleRowActive}
-      onRowLayout={layout => this._updateLayoutMap(index, layout.nativeEvent.layout)}
-      />);
-  },
-  _updateLayoutMap(index, layout) {
-      if (!this.firstRowY || layout.y < this.firstRowY) {
-          this.firstRowY = layout.y;
-      }
-      this.layoutMap[index] = layout;
+      onRowLayout={layout => this.layoutMap[index] = layout.nativeEvent.layout}
+      />
   },
   renderActive: function() {
     if (!this.state.active) return;
@@ -338,15 +329,20 @@ var SortableListView = React.createClass({
         onContentSizeChange={(width, height) => {
           this.scrollContainerHeight = height;
         }}
-        onLayout={(e) => this.listLayout = e.nativeEvent.layout}
+        onLayout={(e) => {
+          this.listLayout = e.nativeEvent.layout
+          this.scrollResponder = this.refs.list.getScrollResponder();
+          this.refs.wrapper.measure((frameX, frameY, frameWidth, frameHeight, pageX, pageY) => {
+
+          let layout = {frameX, frameY, frameWidth, frameHeight, pageX, pageY};
+          this.wrapperLayout = layout;
+      });
+        }}
         scrollEnabled={!this.state.active && (this.props.scrollEnabled !== false)}
         renderRow={this.renderRow}
       />
       {this.renderActive()}
     </View>
-  },
-  scrollTo: function(...args) {
-    this.scrollResponder.scrollTo.apply(this.scrollResponder, args);
   }
 });
 
