@@ -109,6 +109,8 @@ var SortableListView = React.createClass({
 
     this.state.panResponder = PanResponder.create({
       onStartShouldSetPanResponder: (e) => true,
+      onPanResponderTerminationRequest: () => false,
+      onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponderCapture: (e, a) => {
         //Only capture when moving vertically, this helps for child swiper rows.
         let vy = Math.abs(a.vy);
@@ -123,6 +125,9 @@ var SortableListView = React.createClass({
        },
 
        onPanResponderGrant: (e, gestureState) => {
+          if(this.props.scrollParent){
+            this.props.scrollParent.setNativeProps({scrollEnabled: false})
+          }
           this.moved = true;
           this.props.onMoveStart &&  this.props.onMoveStart();
           this.state.pan.setOffset(currentPanValue);
@@ -171,6 +176,7 @@ var SortableListView = React.createClass({
         this.state.active = false;
         this.state.hovering = false;
         this.moveY = null;
+        this.props.scrollParent.setNativeProps({scrollEnabled: true})
       }
      });
 
